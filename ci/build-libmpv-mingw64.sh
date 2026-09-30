@@ -115,9 +115,12 @@ function gettar {
 }
 
 # Clone a git dependency at a pinned tag (shallow, tag-checked-out).
+# Submodules are fetched shallow too: libplacebo needs its bundled `glad`,
+# ffmpeg/dav1d/others carry submodules needed for the build.
 function gitpin {
     local url=$1 dest=$2 tag=$3
-    [ -d "$dest" ] || git clone --depth=1 --branch "$tag" "$url" "$dest"
+    [ -d "$dest" ] || git clone --depth=1 --branch "$tag" \
+        --recurse-submodules --shallow-submodules "$url" "$dest"
     pushd "$dest"
     git checkout --quiet "$tag"
     popd
