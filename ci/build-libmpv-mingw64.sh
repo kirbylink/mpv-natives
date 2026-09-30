@@ -265,7 +265,10 @@ CFLAGS+=" -I'$prefix_dir/include'"
 LDFLAGS+=" -L'$prefix_dir/lib'"
 # Static CRT: fold libgcc / libstdc++ / winpthread into libmpv-2.dll so the
 # resulting DLL has no MinGW runtime DLL dependencies (the /MT equivalent).
-LDFLAGS+=" -static -static-libgcc -static-libstdc++"
+# -lstdc++ is added explicitly: libplacebo is C++ but libmpv is a C target, so
+# meson's C link driver does not pull in the C++ runtime on its own. These
+# flags land inside meson's --start-group/--end-group, so ordering is safe.
+LDFLAGS+=" -static -static-libgcc -static-libstdc++ -lstdc++"
 export CFLAGS LDFLAGS
 
 build=mingw_build
