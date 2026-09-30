@@ -1,0 +1,116 @@
+name: build-windows
+
+# Builds libmpv for Windows (x86_64) from mpv source pinned to a release tag.
+# Recipe is adapted from mpv's own CI (mpv-player/mpv .github/workflows/build.yml,
+# job "mingw"): same dependency setup, same ci/build-mingw64.sh invocation. The
+# only additions are collecting libmpv-2.dll plus the DLL closure and shipping
+# them as an artifact with SHA-256 checksums.
+#
+# Pinned to mpv v0.41.0 — the version whose client API (131077) the jlibmpv
+# JNA bindings are validated against. Bump the ref here for a libmpv update.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  MPV_REF: v0.41.0
+  TARGET: x86_64-w64-mingw32
+  RUST_TARGET: x86_64-pc-windows-gnu
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - name: Check out mpv (pinned tag)
+        uses: actions/checkout@v7
+        with:
+          repository: mpv-player/mpv
+          ref: ${{ env.MPV_REF }}
+          fetch-depth: 1
+
+      - name: Get time
+        id: get_time
+        run: echo "timestamp=$(date +%s%N)" >> $GITHUB_OUTPUT
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.TARGET }}-${{ steps.get_time.outputs.timestamp }}
+          restore-keys: ${{ env.TARGET }}-
+
+      - name: Install dependencies
+        run: |
+          rustup target add ${{ env.RUST_TARGET }}
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            ccache g++-mingw-w64 gcc-multilib python3-pip nasm ninja-build pkgconf \
+            wine64 wine
+          python3 -m pip install meson
+
+      - name: Install Meson Wraps
+        run: |
+          mkdir subprojects -p
+          meson wrap install mujs
+          meson subprojects download
+
+      - name: Build mpv dependencies
+        run: |
+          ./ci/build-mingw64.sh
+
+      - name: Build mpv and pack artifact
+        id: build
+        run: |
+          ./ci/build-mingw64.sh meson pack
+
+      - name: Print meson log on failure
+        if: failure()
+        run: cat ./mingw_build/meson-logs/meson-log.txt
+
+      - name: Collect libmpv and DLL closure
+        run: |
+          mkdir -p artifact-libmpv
+          cp -pv artifact/*.dll artifact-libmpv/
+          LIBMPV=$(find mingw_build -maxdepth 1 -name "libmpv-*.dll" | head -n 1)
+          [ -n "$LIBMPV" ] || { echo "libmpv DLL not found in mingw_build"; ls -l mingw_build | head -50; exit 1; }
+          cp -pv "$LIBMPV" artifact-libmpv/
+          echo "=== contents ==="
+          ls -l artifact-libmpv
+
+      - name: Checksums
+        run: |
+          cd artifact-libmpv
+          sha256sum *.dll > checksums.txt
+          cat checksums.txt
+
+      - name: Artifact name
+        id: artifact
+        run: |
+          VERSION_FILE=$(find . -path "*/common/version.h" -type f | head -n 1)
+          VER=$(grep VERSION "$VERSION_FILE" | cut -d'"' -f2)
+          echo "name=mpv-natives-windows-x86_64-mpv-$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Zip artifact
+        run: |
+          cd artifact-libmpv
+          zip -9r "../${{ steps.artifact.outputs.name }}.zip" .
+          ls -l ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: ${{ steps.artifact.outputs.name }}.zip
+
+      - name: Save ccache
+        uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.TARGET }}-${{ steps.get_time.outputs.timestamp }}
