@@ -253,7 +253,7 @@ _libplacebo () {
     makeplusinstall
     popd
 }
-libplacebo_mark=lib/libplacebo.a
+_libplacebo_mark=lib/libplacebo.a
 build_if_missing libplacebo
 
 ## mpv
