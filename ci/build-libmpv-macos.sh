@@ -39,9 +39,9 @@ export RANLIB=ranlib
 export CFLAGS="-O2 -pipe -Wall"
 export LDFLAGS=""
 
-# anything that uses pkg-config
-export PKG_CONFIG_SYSROOT_DIR="$prefix_dir"
-export PKG_CONFIG_LIBDIR="$PKG_CONFIG_SYSROOT_DIR/lib/pkgconfig"
+# Prefix for the static deps we build ourselves, added additively so the
+# system/brew pkg-config files (icu-uc, zlib, ...) are still visible.
+export PKG_CONFIG_PATH="$prefix_dir/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 
 # --- Pinned dependency versions -------------------------------------------
 # Latest stable tag on or before the mpv v0.41.0 release (2025-12-21).
@@ -50,7 +50,6 @@ DAV1D_VER=1.5.2
 LIBPLACEBO_VER=v7.351.0
 LIBASS_VER=0.17.4
 LCMS2_VER=lcms2.17
-ZLIB_VER=1.3.1
 FREETYPE_VER=2.14.1
 FRIBIDI_VER=1.0.16
 HARFBUZZ_VER=12.2.0
@@ -108,15 +107,7 @@ function build_if_missing {
 }
 
 ## mpv's dependencies (all static, native build)
-
-_zlib () {
-    gettar "https://zlib.net/fossils/zlib-${ZLIB_VER}.tar.gz"
-    builddir zlib-${ZLIB_VER}
-    CC=cc AR=ar RANLIB=ranlib make -fMakefile.lib \
-        LIBSUFFIX= PREFIX=/ LIBPATH=$prefix_dir/lib install
-    popd
-}
-_zlib_mark=lib/libz.a
+# macOS ships zlib and iconv in the system, so neither is built here.
 
 _dav1d () {
     gitpin https://code.videolan.org/videolan/dav1d.git dav1d "$DAV1D_VER"
@@ -190,7 +181,7 @@ _libass () {
 }
 _libass_mark=lib/libass.a
 
-for x in zlib dav1d lcms2; do
+for x in dav1d lcms2; do
     build_if_missing $x
 done
 for x in ffmpeg freetype fribidi harfbuzz libass; do
@@ -228,8 +219,8 @@ meson setup $build \
   -Dshaderc=disabled \
   -Dspirv-cross=disabled \
   -Dvulkan=disabled \
-  -Dcocoa=disabled \
-  -Dgl-cocoa=disabled \
+  -Dcocoa=enabled \
+  -Dgl-cocoa=enabled \
   -Dcoreaudio=enabled \
   -Dvideotoolbox-pl=enabled
 meson compile -C $build

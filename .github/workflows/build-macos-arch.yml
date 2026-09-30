@@ -55,11 +55,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install ccache nasm ninja
-          python3 -m pip install --user meson
-          export PATH="$HOME/Library/Python/3.12/bin:$PATH"
-          # export so meson finds pip-installed tools
-          echo "$HOME/Library/Python/3.12/bin" >> "$GITHUB_PATH"
+          # PEP 668: pip installs are blocked on the macOS runner, use brew.
+          brew install ccache nasm ninja meson
 
       # Run the vendored build script from inside the mpv source tree, so the
       # native build writes macos_prefix/ and the meson build next to mpv's
