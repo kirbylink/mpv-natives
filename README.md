@@ -14,9 +14,9 @@ here, as versioned GitHub release assets.
   jlibmpv JNA bindings are validated against. A libmpv update means bumping
   `MPV_REF` in the workflows.
 - **Build source:** the mpv source tree is checked out at that tag by
-  GitHub Actions and built with mpv's own CI scripts
-  (`ci/build-mingw64.sh`, ...). No mpv source or third-party binaries are
-  stored in this repository.
+  GitHub Actions and built with the vendored scripts in `ci/`
+  (`build-libmpv-mingw64.sh`, `build-libmpv-macos.sh`). No mpv source or
+  third-party binaries are stored in this repository.
 
 ## Releases
 
@@ -26,7 +26,7 @@ single file) and a `checksums.txt` (SHA-256) for verification.
 | Asset | Contents |
 |---|---|
 | `mpv-natives-windows-x86_64-mpv-<ver>.zip` | `libmpv-2.dll` (all dependencies statically linked, mingw64 build) |
-| `mpv-natives-macos-<arch>-mpv-<ver>.zip` | `libmpv.dylib` (in preparation) |
+| `mpv-natives-macos-universal-mpv-<ver>.zip` | `libmpv.dylib` (universal arm64 + x86_64, all dependencies statically linked) |
 
 The Windows DLL is fully self-contained: every dependency (ffmpeg, libass,
 libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into
