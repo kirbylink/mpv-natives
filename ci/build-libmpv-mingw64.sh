@@ -297,11 +297,15 @@ mkdir -p artifact
 LIBMPV_DLL=$(find $build -maxdepth 1 -name 'libmpv-*.dll' | head -n 1)
 [ -n "$LIBMPV_DLL" ] || { echo "ERROR: libmpv DLL not found in $build"; ls -l $build; exit 1; }
 cp -pv "$LIBMPV_DLL" artifact/
+# buildtype=release emits DWARF .debug_* sections even for MinGW; for a
+# distributable native we strip them out (~130 MB) so only the code/data
+# sections remain.
+"$TARGET-strip" --strip-all "artifact/$(basename "$LIBMPV_DLL")"
 # import library, for native linkers that want it (jlibmpv uses JNA, optional)
-cp -pv "$build/libmpv.dll.a" artifact/ 2>/dev/null || true
+cp -pv "$build"/libmpv*.dll.a artifact/ 2>/dev/null || true
 cp -pv "$build"/*.h artifact/ 2>/dev/null || true
 
 echo "=== artifact contents ==="
 ls -l artifact
 echo "=== libmpv-2.dll import dependencies (should be Windows system DLLs only) ==="
-"$TARGET-objdump" -p artifact/$(basename "$LIBMPV_DLL") | grep -A500 "DLL Name" | grep -E "DLL Name" || true
+"$TARGET-objdump" -p "artifact/$(basename "$LIBMPV_DLL")" | awk '/DLL Name/{print $3}' || true

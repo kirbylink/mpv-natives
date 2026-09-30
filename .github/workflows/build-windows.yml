@@ -90,17 +90,14 @@ jobs:
           echo "name=mpv-natives-windows-x86_64-mpv-$VER" >> "$GITHUB_OUTPUT"
           echo "version=$VER" >> "$GITHUB_OUTPUT"
 
-      - name: Zip artifact
-        run: |
-          cd artifact-libmpv
-          zip -9r "../${{ steps.artifact.outputs.name }}.zip" .
-          ls -l ..
-
+      # upload-artifact zips the directory itself, so handing it the folder
+      # (not a pre-zipped file) yields a single-level archive without the
+      # double-zip wrapper.
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: ${{ steps.artifact.outputs.name }}.zip
+          path: artifact-libmpv
 
       - name: Save ccache
         uses: actions/cache/save@v4
