@@ -51,7 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
             ccache g++-mingw-w64 gcc-multilib python3-pip nasm ninja-build pkgconf \
-            wine64 wine
+            wine64 wine zip
           python3 -m pip install meson
 
       - name: Install Meson Wraps
@@ -66,7 +66,10 @@ jobs:
       - name: Patch build-mingw64.sh for current FFmpeg
         run: |
           sed -i 's/ --enable-libshaderc//' ci/build-mingw64.sh
-          grep -n "enable-vulkan" ci/build-mingw64.sh
+          # v0.41.0 uses deprecated Vulkan queue APIs against current headers;
+          # the script resets CFLAGS, so patch it inside the file.
+          sed -i 's/^export CFLAGS="-O2 -pipe -Wall"$/export CFLAGS="-O2 -pipe -Wall -Wno-error=deprecated-declarations"/' ci/build-mingw64.sh
+          grep -n "enable-vulkan\|export CFLAGS" ci/build-mingw64.sh
 
       - name: Build mpv dependencies
         run: |
