@@ -20,13 +20,18 @@ here, as versioned GitHub release assets.
 
 ## Releases
 
-Each platform build produces a zip with the native library, its runtime
-dependency closure, and a `checksums.txt` (SHA-256) for verification.
+Each platform build produces a zip with the native library (self-contained,
+single file) and a `checksums.txt` (SHA-256) for verification.
 
 | Asset | Contents |
 |---|---|
-| `mpv-natives-windows-x86_64-mpv-<ver>.zip` | `libmpv-2.dll` + ffmpeg/decoder DLL closure (mingw64 build) |
+| `mpv-natives-windows-x86_64-mpv-<ver>.zip` | `libmpv-2.dll` (all dependencies statically linked, mingw64 build) |
 | `mpv-natives-macos-<arch>-mpv-<ver>.zip` | `libmpv.dylib` (in preparation) |
+
+The Windows DLL is fully self-contained: every dependency (ffmpeg, libass,
+libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into
+`libmpv-2.dll` together with a static C/C++ runtime. It depends only on
+Windows system libraries, so there is no DLL closure to extract alongside it.
 
 Linux users can normally use the distribution package (`apt install libmpv1`)
 instead; a self-built Linux artifact is planned only if needed.
