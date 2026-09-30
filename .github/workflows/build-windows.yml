@@ -60,6 +60,14 @@ jobs:
           meson wrap install mujs
           meson subprojects download
 
+      # FFmpeg master removed --enable-libshaderc (mpv dropped it from its own
+      # CI script afterwards), but the v0.41.0 build-mingw64.sh still passes
+      # it, so strip it before the ffmpeg step runs.
+      - name: Patch build-mingw64.sh for current FFmpeg
+        run: |
+          sed -i 's/ --enable-libshaderc//' ci/build-mingw64.sh
+          grep -n "enable-vulkan" ci/build-mingw64.sh
+
       - name: Build mpv dependencies
         run: |
           ./ci/build-mingw64.sh
