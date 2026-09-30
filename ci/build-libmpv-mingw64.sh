@@ -1,4 +1,7 @@
 #!/bin/bash -e
+set -e
+# (The shebang -e is not honored when the workflow invokes us via `bash file`,
+# so set -e is repeated here to guarantee fail-fast regardless of caller.)
 #
 # Build a single self-contained libmpv-2.dll for Windows x86_64 (MinGW-w64).
 #
@@ -149,6 +152,7 @@ _iconv () {
 _iconv_mark=lib/libiconv.a
 
 _zlib () {
+    gettar "https://zlib.net/fossils/zlib-${ZLIB_VER}.tar.gz"
     pushd zlib-${ZLIB_VER}
     make -fwin32/Makefile.gcc clean
     make -fwin32/Makefile.gcc PREFIX=$TARGET- CC="$CC" SHARED_MODE=0 \
@@ -173,7 +177,7 @@ _lcms2 () {
     gitpin https://github.com/mm2/Little-CMS.git lcms2 "$LCMS2_VER"
     builddir lcms2
     meson setup .. --cross-file "$prefix_dir/crossfile" \
-        -Dtests=disabled -D{utils,versionedlibs}=false -Ddefault_library=static
+        -Dtests=disabled -Dutils=false -Ddefault_library=static
     makeplusinstall
     popd
 }
