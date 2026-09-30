@@ -1,9 +1,10 @@
 name: build-macos
 
 # Builds a universal (arm64 + x86_64) self-contained libmpv.dylib for macOS
-# from mpv source pinned to a release tag. Two native builds run in parallel
-# (x86_64 on macos-14, arm64 on macos-15); a merge job combines the two dylibs
-# with lipo into one universal library and uploads it.
+# from mpv source pinned to a release tag. GitHub's macOS runners are all
+# arm64 now, so one arm64 runner builds the arm64 slice natively and the
+# x86_64 slice via clang --target=x86_64-apple-darwin; a merge step combines
+# both with lipo into one universal library and uploads it.
 #
 # Every dependency is built static and linked into the one dylib (same
 # approach as the Windows build). jlibmpv expects the file name
@@ -22,21 +23,12 @@ env:
   MPV_REF: v0.41.0
 
 jobs:
-  build-x86_64:
-    uses: ./.github/workflows/build-macos-arch.yml
-    with:
-      arch: x86_64
-      runner: macos-14
-
-  build-arm64:
-    uses: ./.github/workflows/build-macos-arch.yml
-    with:
-      arch: arm64
-      runner: macos-15
-
-  merge:
-    needs: [build-x86_64, build-arm64]
+  build:
     runs-on: macos-15
+    env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
     steps:
       - name: Check out mpv-natives (build scripts)
         uses: actions/checkout@v4
@@ -51,19 +43,49 @@ jobs:
           path: mpv
           fetch-depth: 1
 
-      - name: Download architecture artifacts
-        uses: actions/download-artifact@v4
+      - name: Get time
+        id: get_time
+        run: echo "timestamp=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
         with:
-          pattern: mpv-natives-macos-${{ env.MPV_REF }}-*
-          path: arch
-          merge-multiple: true
+          path: ${{ env.CCACHE_DIR }}
+          key: macos-${{ steps.get_time.outputs.timestamp }}
+          restore-keys: macos-
+
+      - name: Install dependencies
+        run: |
+          # PEP 668: pip installs are blocked on the macOS runner, use brew.
+          brew install ccache nasm ninja meson
+
+      # The vendored build script runs from inside the mpv source tree, once
+      # per architecture. Each run writes macos_prefix-<arch>/, the meson
+      # build dir, and the self-contained dylib into mpv/artifact-<arch>/.
+      - name: Build arm64 slice
+        working-directory: mpv
+        env:
+          ARCH: arm64
+        run: bash "${{ github.workspace }}/ci/build-libmpv-macos.sh"
+
+      - name: Build x86_64 slice
+        working-directory: mpv
+        env:
+          ARCH: x86_64
+        run: bash "${{ github.workspace }}/ci/build-libmpv-macos.sh"
+
+      - name: Print meson logs on failure
+        if: failure()
+        run: |
+          cat mpv/macos_build-arm64/meson-logs/meson-log.txt 2>/dev/null || true
+          cat mpv/macos_build-x86_64/meson-logs/meson-log.txt 2>/dev/null || true
 
       - name: Create universal dylib
         run: |
           mkdir -p artifact-libmpv
           lipo -create \
-            "arch/x86_64/libmpv-2.dylib" \
-            "arch/arm64/libmpv-2.dylib" \
+            mpv/artifact-arm64/libmpv-2.dylib \
+            mpv/artifact-x86_64/libmpv-2.dylib \
             -output artifact-libmpv/libmpv.dylib
           lipo -info artifact-libmpv/libmpv.dylib
           cp -pv mpv/mpvrender.h mpv/mpv/client.h mpv/ebml_types.h artifact-libmpv/ 2>/dev/null || true
@@ -76,3 +98,10 @@ jobs:
         with:
           name: mpv-natives-macos-universal-mpv-${{ env.MPV_REF }}
           path: artifact-libmpv
+
+      - name: Save ccache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: macos-${{ steps.get_time.outputs.timestamp }}
