@@ -176,7 +176,11 @@ _ffmpeg_mark=lib/libavcodec.a
 _freetype () {
     gettar "https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VER}.tar.xz"
     builddir freetype-${FREETYPE_VER}
-    meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" -Ddefault_library=static
+    # zlib stays (universal system lib); every other third-party provider is
+    # disabled so no arm64-only brew package can leak into the x86_64 slice.
+    meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" \
+        -Dzlib=enabled -Dbrotli=disabled -Dbzip2=disabled -Dpng=disabled \
+        -Dpcf=disabled -Dzstd=disabled -Dglib=disabled -Ddefault_library=static
     makeplusinstall
     popd
 }
@@ -197,8 +201,10 @@ _harfbuzz () {
     builddir harfbuzz-${HARFBUZZ_VER}
     # icu disabled: the runner's brew icu is arm64-only and would poison the
     # x86_64 slice; harfbuzz shapes fine without it (built-in unicode data).
+    # coretext is the Apple font provider (system framework, universal).
     meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" \
-        -Dtests=disabled -Dutils=false -Dicu=disabled -Ddefault_library=static
+        -Dtests=disabled -Dutilities=disabled -Dicu=disabled \
+        -Dcoretext=enabled -Ddefault_library=static
     makeplusinstall
     popd
 }
@@ -207,7 +213,12 @@ _harfbuzz_mark=lib/libharfbuzz.a
 _libass () {
     gitpin https://github.com/libass/libass.git libass "$LIBASS_VER"
     builddir libass
-    meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" -Ddefault_library=static
+    # CoreText is the system font provider (framework, universal); fontconfig
+    # is off so the runner's arm64-only brew package can't leak into the
+    # x86_64 slice. asm off for determinism across both slices.
+    meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" \
+        -Dfontconfig=disabled -Dcoretext=enabled -Dasm=disabled \
+        -Ddefault_library=static
     makeplusinstall
     popd
 }
@@ -222,10 +233,13 @@ done
 _libplacebo () {
     gitpin https://code.videolan.org/videolan/libplacebo.git libplacebo "$LIBPLACEBO_VER"
     builddir libplacebo
-    # opengl enabled (the only renderer jlibmpv uses); vulkan/d3d11 off
+    # opengl enabled (the only renderer jlibmpv uses); vulkan/d3d11 off;
+# xxhash off (optional) so the arm64-only brew package can't leak into the
+# x86_64 slice.
     meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" \
         -Ddemos=false -Dopengl=enabled -Dd3d11=disabled \
-        -Dvulkan=disabled -Dlcms=disabled -Ddefault_library=static
+        -Dvulkan=disabled -Dlcms=disabled -Dxxhash=disabled \
+        -Ddefault_library=static
     makeplusinstall
     popd
 }
