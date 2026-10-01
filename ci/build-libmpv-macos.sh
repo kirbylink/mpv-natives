@@ -73,6 +73,7 @@ buildtype = 'release'
 [binaries]
 c = ['cc', '--target=x86_64-apple-darwin']
 cpp = ['c++', '--target=x86_64-apple-darwin']
+objc = ['cc', '--target=x86_64-apple-darwin']
 ar = 'ar'
 strip = 'strip'
 pkgconfig = 'pkg-config'
