@@ -178,9 +178,11 @@ _freetype () {
     builddir freetype-${FREETYPE_VER}
     # zlib stays (universal system lib); every other third-party provider is
     # disabled so no arm64-only brew package can leak into the x86_64 slice.
+    # harfbuzz off: we link our own static harfbuzz into libmpv, not FT's
+    # hook (and it would pull brew's build in again).
     meson setup .. $MESON_EXTRA --buildtype release -Dprefix="$prefix_dir" \
         -Dzlib=enabled -Dbrotli=disabled -Dbzip2=disabled -Dpng=disabled \
-        -Dpcf=disabled -Dzstd=disabled -Dglib=disabled -Ddefault_library=static
+        -Dharfbuzz=disabled -Ddefault_library=static
     makeplusinstall
     popd
 }
