@@ -278,7 +278,7 @@ meson compile -C $build
 ## Collect the self-contained dylib
 
 mkdir -p artifact-$ARCH
-LIBMPV_DYLIB=$(find $build -maxdepth 1 -name 'libmpv-2.dylib' | head -n 1)
+LIBMPV_DYLIB=$(find $build -maxdepth 1 -name "libmpv.2.dylib" | head -n 1)
 [ -n "$LIBMPV_DYLIB" ] || { echo "ERROR: libmpv dylib not found in $build"; ls -l $build; exit 1; }
 cp -pv "$LIBMPV_DYLIB" artifact-$ARCH/
 cp -pv "$build"/*.h artifact-$ARCH/ 2>/dev/null || true
@@ -286,4 +286,4 @@ cp -pv "$build"/*.h artifact-$ARCH/ 2>/dev/null || true
 echo "=== artifact-$ARCH contents ==="
 ls -l artifact-$ARCH
 echo "=== libmpv-2.dylib ($ARCH) load commands (should be system frameworks only) ==="
-otool -arch $ARCH "artifact-$ARCH/libmpv-2.dylib" -L
+otool -arch $ARCH "artifact-$ARCH/libmpv.2.dylib" -L

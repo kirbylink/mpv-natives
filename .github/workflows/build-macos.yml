@@ -84,8 +84,8 @@ jobs:
         run: |
           mkdir -p artifact-libmpv
           lipo -create \
-            mpv/artifact-arm64/libmpv-2.dylib \
-            mpv/artifact-x86_64/libmpv-2.dylib \
+            mpv/artifact-arm64/libmpv.2.dylib \
+            mpv/artifact-x86_64/libmpv.2.dylib \
             -output artifact-libmpv/libmpv.dylib
           lipo -info artifact-libmpv/libmpv.dylib
           cp -pv mpv/mpvrender.h mpv/mpv/client.h mpv/ebml_types.h artifact-libmpv/ 2>/dev/null || true
