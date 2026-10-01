@@ -15,8 +15,8 @@ here, as versioned GitHub release assets.
   `MPV_REF` in the workflows.
 - **Build source:** the mpv source tree is checked out at that tag by
   GitHub Actions and built with the vendored scripts in `ci/`
-  (`build-libmpv-mingw64.sh`, `build-libmpv-macos.sh`). No mpv source or
-  third-party binaries are stored in this repository.
+  (`build-libmpv-mingw64.sh`, `build-libmpv-macos.sh`, `build-libmpv-linux.sh`).
+  No mpv source or third-party binaries are stored in this repository.
 
 ## Releases
 
@@ -27,19 +27,25 @@ single file) and a `checksums.txt` (SHA-256) for verification.
 |---|---|
 | `mpv-natives-windows-x86_64-mpv-<ver>.zip` | `libmpv-2.dll` (all dependencies statically linked, mingw64 build) |
 | `mpv-natives-macos-universal-mpv-<ver>.zip` | `libmpv.dylib` (universal arm64 + x86_64, all dependencies statically linked) |
+| `mpv-natives-linux-x86_64-mpv-<ver>.zip` | `libmpv.so` (all dependencies statically linked, native x86_64 build) |
 
-The Windows DLL is fully self-contained: every dependency (ffmpeg, libass,
-libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into
-`libmpv-2.dll` together with a static C/C++ runtime. It depends only on
-Windows system libraries, so there is no DLL closure to extract alongside it.
+Each native is fully self-contained: every dependency (ffmpeg, libass,
+libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into the
+single library together with the C/C++ runtime where needed. The library
+depends only on the platform's system libraries, so there is no dependency
+closure to extract alongside it — jlibmpv loads it at runtime via JNA and
+never compiles against it, so no public headers are shipped.
 
-Linux users can normally use the distribution package (`apt install libmpv1`)
-instead; a self-built Linux artifact is planned only if needed.
+On Linux the self-built `libmpv.so` additionally removes the need for the
+distribution package (`libmpv1`), which lags behind in codec support (dav1d/
+AV1, x264/x265): the pinned ffmpeg 8.0.1 guarantees the full codec set on any
+recent glibc distribution.
 
 ## How to use with jlibmpv
 
 1. Download the release asset for your platform and extract it.
-2. Point jlibmpv at the extracted `libmpv-2.dll` / `libmpv.dylib`:
+2. Point jlibmpv at the extracted native library — `libmpv-2.dll` (Windows),
+   `libmpv.dylib` (macOS) or `libmpv.so` (Linux):
    `-Dmpv.libmpv.path=/path/to/extracted/libmpv-2.dll`.
 
 ## Building

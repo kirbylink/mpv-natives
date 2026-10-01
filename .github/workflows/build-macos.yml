@@ -88,7 +88,6 @@ jobs:
             mpv/artifact-x86_64/libmpv.2.dylib \
             -output artifact-libmpv/libmpv.dylib
           lipo -info artifact-libmpv/libmpv.dylib
-          cp -pv mpv/mpvrender.h mpv/mpv/client.h mpv/ebml_types.h artifact-libmpv/ 2>/dev/null || true
           sha256sum artifact-libmpv/libmpv.dylib > artifact-libmpv/checksums.txt
           cat artifact-libmpv/checksums.txt
           ls -l artifact-libmpv

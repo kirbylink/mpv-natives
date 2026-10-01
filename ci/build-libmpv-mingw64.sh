@@ -301,9 +301,10 @@ cp -pv "$LIBMPV_DLL" artifact/
 # distributable native we strip them out (~130 MB) so only the code/data
 # sections remain.
 "$TARGET-strip" --strip-all "artifact/$(basename "$LIBMPV_DLL")"
-# import library, for native linkers that want it (jlibmpv uses JNA, optional)
-cp -pv "$build"/libmpv*.dll.a artifact/ 2>/dev/null || true
-cp -pv "$build"/*.h artifact/ 2>/dev/null || true
+# The artifact is the single self-contained DLL only. No public headers
+# (jlibmpv loads it via JNA at runtime and never compiles against it) and no
+# import library - keeping it a single binary stays consistent with the
+# macOS build (one libmpv.dylib) and the Linux build (one libmpv.so).
 
 echo "=== artifact contents ==="
 ls -l artifact

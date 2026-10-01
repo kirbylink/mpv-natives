@@ -1,14 +1,20 @@
-name: build-windows
+name: build-linux
 
-# Builds a single self-contained libmpv-2.dll for Windows (x86_64) from mpv
-# source pinned to a release tag. Every dependency is built static and linked
-# into the one DLL together with a static CRT, so the artifact has no runtime
-# dependency closure to ship (unlike mpv's own shared-DLL CI build).
+# Builds a single self-contained libmpv.so for Linux (x86_64) from mpv source
+# pinned to a release tag. Every dependency is built static and linked into
+# the one .so; only glibc/pthread/dl/m and the system zlib stay external, so
+# the artifact has no runtime dependency closure to ship (unlike mpv's own
+# shared-lib CI build).
 #
-# Pinned to mpv v0.41.0 — the version whose client API (131077) the jlibmpv
+# Linux is the easiest of the three platforms: a single native build on an
+# ubuntu runner, no cross-compile, no lipo. The only Linux-specific work is the
+# font stack: libass (a hard mpv dependency) needs fontconfig (-> expat) where
+# macOS/Windows use CoreText/DirectWrite.
+#
+# Pinned to mpv v0.41.0 - the version whose client API (131077) the jlibmpv
 # JNA bindings are validated against. Bump the ref here for a libmpv update.
 # The build recipe (dependency versions, static flags) lives in
-# ci/build-libmpv-mingw64.sh in this repository.
+# ci/build-libmpv-linux.sh in this repository.
 
 on:
   push:
@@ -17,7 +23,7 @@ on:
 
 env:
   MPV_REF: v0.41.0
-  TARGET: x86_64-w64-mingw32
+  TARGET: x86_64-linux
 
 jobs:
   build:
@@ -55,38 +61,38 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            ccache g++-mingw-w64 gcc-multilib python3-pip nasm ninja-build pkgconf
+            ccache nasm ninja-build pkgconf cmake autoconf automake libtool
           python3 -m pip install meson
 
       # Run the vendored build script from inside the mpv source tree, so the
-      # cross-build writes mingw_prefix/ and the meson build next to mpv's
-      # meson.build and produces the self-contained DLL in mpv/artifact/.
+      # native build writes linux_prefix/ and the meson build next to mpv's
+      # meson.build and produces the self-contained .so in mpv/artifact/.
       - name: Build self-contained libmpv
         working-directory: mpv
-        run: bash "${{ github.workspace }}/ci/build-libmpv-mingw64.sh"
+        run: bash "${{ github.workspace }}/ci/build-libmpv-linux.sh"
 
       - name: Print meson log on failure
         if: failure()
-        run: cat mpv/mingw_build/meson-logs/meson-log.txt
+        run: cat mpv/linux_build/meson-logs/meson-log.txt
 
       - name: Collect artifact
         run: |
           mkdir -p artifact-libmpv
-          cp -pv mpv/artifact/libmpv-*.dll artifact-libmpv/
+          cp -pv mpv/artifact/libmpv.so artifact-libmpv/
           echo "=== contents ==="
           ls -l artifact-libmpv
 
       - name: Checksums
         run: |
           cd artifact-libmpv
-          sha256sum *.dll > checksums.txt
+          sha256sum libmpv.so > checksums.txt
           cat checksums.txt
 
       - name: Artifact name
         id: artifact
         run: |
           VER=$(cat mpv/MPV_VERSION | tr -d '[:space:]')
-          echo "name=mpv-natives-windows-x86_64-mpv-$VER" >> "$GITHUB_OUTPUT"
+          echo "name=mpv-natives-linux-x86_64-mpv-$VER" >> "$GITHUB_OUTPUT"
           echo "version=$VER" >> "$GITHUB_OUTPUT"
 
       # upload-artifact zips the directory itself, so handing it the folder
