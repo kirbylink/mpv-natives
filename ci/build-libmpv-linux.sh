@@ -146,7 +146,7 @@ _fontconfig () {
     # expat is the XML backend (our static build); no tests/tools/nls. freetype
     # resolves to our own static build via PKG_CONFIG_PATH (we link it into
     # libmpv, not fc's system one).
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Dxml-backend=expat -Dtests=disabled -Dtools=disabled -Dnls=disabled \
         -Ddefault_library=static
     makeplusinstall
@@ -157,7 +157,7 @@ _fontconfig_mark=lib/libfontconfig.a
 _dav1d () {
     gitpin https://code.videolan.org/videolan/dav1d.git dav1d "$DAV1D_VER"
     builddir dav1d
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Denable_{tools,tests}=false -Ddefault_library=static
     makeplusinstall
     popd
@@ -167,7 +167,7 @@ _dav1d_mark=lib/libdav1d.a
 _lcms2 () {
     gitpin https://github.com/mm2/Little-CMS.git lcms2 "$LCMS2_VER"
     builddir lcms2
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Dtests=disabled -Dutils=false -Ddefault_library=static
     makeplusinstall
     popd
@@ -194,7 +194,7 @@ _freetype () {
     builddir freetype-${FREETYPE_VER}
     # zlib stays (system lib); every other third-party provider is disabled.
     # harfbuzz off: we link our own static harfbuzz into libmpv, not FT's hook.
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Dzlib=enabled -Dbrotli=disabled -Dbzip2=disabled -Dpng=disabled \
         -Dharfbuzz=disabled -Ddefault_library=static
     makeplusinstall
@@ -205,7 +205,7 @@ _freetype_mark=lib/libfreetype.a
 _fribidi () {
     gettar "https://github.com/fribidi/fribidi/releases/download/v${FRIBIDI_VER}/fribidi-${FRIBIDI_VER}.tar.xz"
     builddir fribidi-${FRIBIDI_VER}
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -D{tests,docs}=false -Ddefault_library=static
     makeplusinstall
     popd
@@ -218,7 +218,7 @@ _harfbuzz () {
     # icu off (an extra dep; harfbuzz shapes fine with built-in unicode data).
     # No freetype backend (matches macOS/Windows; the freetype_min_version in
     # harfbuzz is not needed - libass drives freetype itself for font loading).
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Dtests=disabled -Dutilities=disabled -Dicu=disabled \
         -Dfreetype=disabled -Ddefault_library=static
     makeplusinstall
@@ -232,7 +232,7 @@ _libass () {
     # fontconfig is the Linux font provider (system framework equivalent);
     # freetype and fribidi are auto-detected and resolve to our own static
     # builds via PKG_CONFIG_PATH. asm off for determinism.
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Dfontconfig=enabled -Dasm=disabled -Dlibunibreak=disabled \
         -Ddefault_library=static
     makeplusinstall
@@ -246,7 +246,7 @@ _libplacebo () {
     # opengl enabled (the only renderer jlibmpv uses); vulkan/d3d11 off;
     # lcms/xxhash off. GL is resolved at runtime by libplacebo's glad loader,
     # so no libGL link is required.
-    meson setup .. --buildtype release -Dprefix="$prefix_dir" \
+    meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
         -Ddemos=false -Dopengl=enabled -Dd3d11=disabled \
         -Dvulkan=disabled -Dlcms=disabled -Dxxhash=disabled \
         -Ddefault_library=static
