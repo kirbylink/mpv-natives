@@ -132,9 +132,11 @@ _alsa () {
     gitpin https://github.com/alsa-project/alsa-lib.git alsa-lib "$ALSA_VER"
     builddir alsa-lib
     # alsa-lib ships autotools inputs but no generated configure; generate it
-    # in the source tree (we build out-of-tree from ../).
+    # in the source tree (we build out-of-tree from ../). -fPIC is required
+    # because the static archive is linked into the shared libmpv.so, and
+    # alsa's configure only adds -fPIC for shared builds.
     ( cd .. && autoreconf -fi )
-    ../configure --prefix="$prefix_dir" $commonflags
+    CFLAGS="$CFLAGS -fPIC" ../configure --prefix="$prefix_dir" $commonflags
     makeplusinstall
     popd
 }
@@ -177,9 +179,11 @@ _lcms2_mark=lib/liblcms2.a
 _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
+    # --enable-pic: the static archives are linked into the shared
+    # libmpv.so (ffmpeg's configure does not force PIC for static builds).
     args=(
         --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=linux
-        --enable-gpl $commonflags
+        --enable-gpl --enable-pic $commonflags
         --disable-{doc,programs}
         --enable-muxer=spdif --enable-encoder=mjpeg,png --enable-libdav1d
     )
