@@ -36,8 +36,8 @@ if [ "$ARCH" = "x86_64" ]; then
     TARGET_FLAG="--target=x86_64-apple-darwin"
 fi
 
-export CC="cc $TARGET_FLAG"
-export CXX="c++ $TARGET_FLAG"
+export CC="cc${TARGET_FLAG:+ $TARGET_FLAG}"
+export CXX="c++${TARGET_FLAG:+ $TARGET_FLAG}"
 export AR=ar
 export NM=nm
 export RANLIB=ranlib
@@ -160,7 +160,7 @@ _lcms2_mark=lib/liblcms2.a
 _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
-    local args=(
+    args=(
         --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=macosx
         --enable-gpl $commonflags
         --cc="$CC" --cxx="$CXX"
@@ -256,7 +256,7 @@ meson setup $build $MESON_EXTRA \
   -Dcocoa=enabled \
   -Dgl-cocoa=enabled \
   -Dcoreaudio=enabled \
-  -Dvideotoolbox-pl=enabled
+  -Dvideotoolbox-gl=enabled
 meson compile -C $build
 
 ## Collect the self-contained dylib
