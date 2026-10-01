@@ -161,7 +161,7 @@ _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
     args=(
-        --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=macosx
+        --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=darwin
         --enable-gpl $commonflags
         --cc="$CC" --cxx="$CXX"
         --disable-{doc,programs}
