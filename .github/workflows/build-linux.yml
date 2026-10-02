@@ -12,23 +12,29 @@ name: build-linux
 # font stack: libass (a hard mpv dependency) needs fontconfig (-> expat) where
 # macOS/Windows use CoreText/DirectWrite.
 #
-# Pinned to mpv v0.41.0 - the version whose client API (131077) the jlibmpv
-# JNA bindings are validated against. Bump the ref here for a libmpv update.
-# The build recipe (dependency versions, static flags) lives in
-# ci/build-libmpv-linux.sh in this repository.
+# Pinned to the mpv tag in ci/versions.env - the version whose client API
+# (131077) the jlibmpv JNA bindings are validated against. Bump MPV_REF (and
+# the dependency pins) there for a libmpv update. The build recipe
+# (dependency versions, static flags) lives in ci/build-libmpv-linux.sh.
+#
+# Triggers: pull requests (all three build workflows act as the PR check),
+# manual workflow_dispatch, and workflow_call from release.yml on tag push.
+# A push to main builds nothing on its own.
 
 on:
-  push:
-    branches: [main]
+  pull_request:
   workflow_dispatch:
+  workflow_call:
 
 env:
-  MPV_REF: v0.41.0
   TARGET: x86_64-linux
 
 jobs:
-  build:
+  linux:
     runs-on: ubuntu-24.04
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      version: ${{ steps.artifact.outputs.version }}
     env:
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -39,11 +45,17 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Load pinned versions
+        id: versions
+        run: |
+          source ci/versions.env
+          echo "mpv_ref=$MPV_REF" >> "$GITHUB_OUTPUT"
+
       - name: Check out mpv (pinned tag)
         uses: actions/checkout@v4
         with:
           repository: mpv-player/mpv
-          ref: ${{ env.MPV_REF }}
+          ref: ${{ steps.versions.outputs.mpv_ref }}
           path: mpv
           fetch-depth: 1
 
@@ -118,12 +130,13 @@ jobs:
         id: artifact
         run: |
           VER=$(cat mpv/MPV_VERSION | tr -d '[:space:]')
-          echo "name=mpv-natives-linux-x86_64-mpv-$VER" >> "$GITHUB_OUTPUT"
+          # Intermediate artifact is a per-platform directory (zipped by
+          # upload-artifact) containing libmpv.so + checksums.txt. release.yml
+          # downloads it and re-uploads the bare .so as the final release asset
+          # named <name>-<VER>.so.
+          echo "name=mpv-natives-linux-x86_64" >> "$GITHUB_OUTPUT"
           echo "version=$VER" >> "$GITHUB_OUTPUT"
 
-      # upload-artifact zips the directory itself, so handing it the folder
-      # (not a pre-zipped file) yields a single-level archive without the
-      # double-zip wrapper.
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

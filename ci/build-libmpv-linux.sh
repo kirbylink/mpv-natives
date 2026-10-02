@@ -31,10 +31,14 @@ set -e
 prefix_dir=$PWD/linux_prefix
 mkdir -p "$prefix_dir"
 
-wget="wget -nc --progress=bar:force"
+wget="wget -nc --progress=bar:force --tries=3 --timeout=60 --waitretry=5"
 
-export CC=gcc
-export CXX=g++
+# Route compilation through ccache (honored by ffmpeg's configure, meson and
+# CMake alike) so rebuilds after a versions.env bump reuse cached objects. In
+# CI the cache dir is provided by the workflow (CCACHE_DIR).
+CCACHE=${CCACHE:-ccache}
+export CC="$CCACHE gcc"
+export CXX="$CCACHE g++"
 export AR=ar
 export NM=nm
 export RANLIB=ranlib
@@ -47,17 +51,9 @@ export LDFLAGS=""
 export PKG_CONFIG_PATH="$prefix_dir/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 
 # --- Pinned dependency versions -------------------------------------------
-# Latest stable tag on or before the mpv v0.41.0 release (2025-12-21).
-FFMPEG_VER=n8.0.1
-DAV1D_VER=1.5.2
-LIBPLACEBO_VER=v7.351.0
-LIBASS_VER=0.17.4
-LCMS2_VER=lcms2.17
-FREETYPE_VER=2.14.1
-FRIBIDI_VER=1.0.16
-HARFBUZZ_VER=12.2.0
-FONTCONFIG_VER=2.16.2
-EXPAT_VER=R_2_7_3
+# Centralized in ci/versions.env (single source of truth shared with the other
+# platforms and with CI). Bump mpv + deps there.
+. "$(dirname "$0")/versions.env"
 
 # Static everywhere: every dependency becomes a .a archive that gets linked
 # into the single libmpv.so. (mpv's own script ships shared libs instead.)
