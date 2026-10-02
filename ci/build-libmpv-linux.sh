@@ -172,11 +172,15 @@ _lcms2_mark=lib/liblcms2.a
 _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
+    # No --enable-gpl: every feature we enable (mjpeg/png encoders, spdif
+    # muxer, libdav1d, all decoders) is available under LGPL, and a GPL
+    # build would taint every application embedding this library. jlibmpv
+    # loads libmpv in-process via JNA, so the library must stay LGPL.
     # --enable-pic: the static archives are linked into the shared
     # libmpv.so (ffmpeg's configure does not force PIC for static builds).
     args=(
         --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=linux
-        --enable-gpl --enable-pic $commonflags
+        --enable-pic $commonflags
         --disable-{doc,programs}
         --enable-muxer=spdif --enable-encoder=mjpeg,png --enable-libdav1d
     )
@@ -287,6 +291,7 @@ meson setup $build \
   --buildtype release -Dstrip=true \
   -Ddefault_library=shared \
   -Dlibmpv=true \
+  -Dgpl=false \
   -Dcplayer=false \
   -Dtests=false \
   -Dlua=disabled \

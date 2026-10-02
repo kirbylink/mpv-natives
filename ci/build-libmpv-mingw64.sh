@@ -181,8 +181,11 @@ _lcms2_mark=lib/liblcms2.a
 _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
+    # No --enable-gpl: we only need LGPL-available features (see the linux
+    # script for the rationale) so the resulting libmpv stays LGPL and can be
+    # embedded via JNA without taint.
     local args=(
-        --pkg-config=pkg-config --target-os=mingw32 --enable-gpl
+        --pkg-config=pkg-config --target-os=mingw32
         --enable-cross-compile --cross-prefix=$TARGET- --arch=${TARGET%%-*}
         --cc="$CC" --cxx="$CXX" $commonflags
         --disable-{doc,programs}
@@ -273,6 +276,7 @@ meson setup $build --cross-file "$prefix_dir/crossfile" \
   --buildtype release \
   -Ddefault_library=shared \
   -Dlibmpv=true \
+  -Dgpl=false \
   -Dcplayer=false \
   -Dtests=false \
   -Dlua=disabled \
