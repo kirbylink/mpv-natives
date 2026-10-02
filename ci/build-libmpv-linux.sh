@@ -21,7 +21,8 @@ set -e
 #   - gl is the plain GL render-API support (no X11/Wayland context backend),
 #     which jlibmpv's externally supplied OpenGL context (JOGL) consumes via
 #     the mpv render API. No vo is built at all (cplayer=false).
-#   - alsa is the audio output (no PulseAudio/JACK/OSS).
+#   - audio goes through the system libasound (linked dynamically, like
+#     CoreAudio/WASAPI); no PulseAudio/JACK/OSS.
 #
 # All third-party sources are pinned to the latest stable tag that existed on
 # the mpv v0.41.0 release date (2025-12-21), so a rebuild reproduces the same
@@ -57,7 +58,6 @@ FRIBIDI_VER=1.0.16
 HARFBUZZ_VER=12.2.0
 FONTCONFIG_VER=2.16.2
 EXPAT_VER=R_2_7_3
-ALSA_VER=v1.2.15
 
 # Static everywhere: every dependency becomes a .a archive that gets linked
 # into the single libmpv.so. (mpv's own script ships shared libs instead.)
@@ -128,26 +128,6 @@ _expat () {
     popd
 }
 _expat_mark=lib/libexpat.a
-
-_alsa () {
-    gitpin https://github.com/alsa-project/alsa-lib.git alsa-lib "$ALSA_VER"
-    builddir alsa-lib
-    # alsa-lib ships autotools inputs but no generated configure; generate it
-    # in the source tree (we build out-of-tree from ../). -fPIC is required
-    # because the static archive is linked into the shared libmpv.so, and
-    # alsa's configure only adds -fPIC for shared builds.
-    ( cd .. && autoreconf -fi )
-    # --with-configdir pins the ALSA_CONFIG_DIR compile-time default to the
-    # canonical system path instead of our build prefix. alsa-lib looks up its
-    # config at this path at runtime (env ALSA_CONFIG_DIR / ALSA_CONFIG_PATH
-    # override); leaving it at $prefix_dir/share/alsa makes snd_pcm_open("default")
-    # fail on any machine that does not carry that build path.
-    CFLAGS="$CFLAGS -fPIC" ../configure --prefix="$prefix_dir" \
-        --with-configdir=/usr/share/alsa $commonflags
-    makeplusinstall
-    popd
-}
-_alsa_mark=lib/libasound.a
 
 _fontconfig () {
     gitpin https://github.com/fontconfig/fontconfig.git fontconfig "$FONTCONFIG_VER"
@@ -278,7 +258,11 @@ _libplacebo_mark=lib/libplacebo.a
 
 # Group A: no intra-prefix deps (freetype is built with harfbuzz off, so it
 # needs nothing we build here - only system zlib).
-for x in expat alsa freetype fribidi dav1d lcms2; do
+# (ALSA is deliberately NOT built here: it is linked dynamically against the
+# system libasound.so.2, like CoreAudio on macOS / WASAPI on Windows. A static
+# libasound failed to resolve the dynamic "cards.pcm.default" device at
+# runtime, so audio is left to the OS audio stack.)
+for x in expat freetype fribidi dav1d lcms2; do
     build_if_missing $x
 done
 # Group B: depend on group A (fontconfig/libass need freetype2.pc, libass
@@ -296,7 +280,9 @@ rm -rf $build
 # against the static dependency archives built above. No CLI player, no tests,
 # no lua/javascript, no vulkan. plain-gl is the OpenGL render-API support
 # (no X11/Wayland context backend - jlibmpv supplies the GL context via JOGL).
-# alsa is the audio output.
+# Audio: alsa=enabled links the system libasound dynamically (meson finds it
+# via the system pkg-config), consistent with CoreAudio/WASAPI on the other
+# platforms - the OS audio stack is left dynamic, everything else static.
 meson setup $build \
   --buildtype release -Dstrip=true \
   -Ddefault_library=shared \
