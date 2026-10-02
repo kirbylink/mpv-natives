@@ -137,7 +137,13 @@ _alsa () {
     # because the static archive is linked into the shared libmpv.so, and
     # alsa's configure only adds -fPIC for shared builds.
     ( cd .. && autoreconf -fi )
-    CFLAGS="$CFLAGS -fPIC" ../configure --prefix="$prefix_dir" $commonflags
+    # --with-configdir pins the ALSA_CONFIG_DIR compile-time default to the
+    # canonical system path instead of our build prefix. alsa-lib looks up its
+    # config at this path at runtime (env ALSA_CONFIG_DIR / ALSA_CONFIG_PATH
+    # override); leaving it at $prefix_dir/share/alsa makes snd_pcm_open("default")
+    # fail on any machine that does not carry that build path.
+    CFLAGS="$CFLAGS -fPIC" ../configure --prefix="$prefix_dir" \
+        --with-configdir=/usr/share/alsa $commonflags
     makeplusinstall
     popd
 }
@@ -149,7 +155,15 @@ _fontconfig () {
     # expat is the XML backend (our static build); no tests/tools/nls. freetype
     # resolves to our own static build via PKG_CONFIG_PATH (we link it into
     # libmpv, not fc's system one).
+    # sysconfdir/localstatedir are pinned to the canonical system paths so the
+    # config paths compiled into libfontconfig (CONFIGDIR, FONTCONFIG_PATH,
+    # FC_CACHEDIR) point at /etc/fonts on any machine, not at our build prefix.
+    # fontconfig loads its config from (in order): $FONTCONFIG_FILE,
+    # $FONTCONFIG_PATH, the compiled-in CONFIGDIR, then its built-in default
+    # config. With sysconfdir=/etc the compiled-in paths match every standard
+    # Linux install, so libass's font lookup works without any env vars.
     meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
+        -Dsysconfdir=/etc -Dlocalstatedir=/var \
         -Dxml-backend=expat -Dtests=disabled -Dtools=disabled -Dnls=disabled \
         -Ddefault_library=static
     makeplusinstall
@@ -309,6 +323,10 @@ LIBMPV_SO=$(find $build -maxdepth 1 -type f -name 'libmpv.so*' | sort -V | tail 
 # jlibmpv loads libmpv.so (no version suffix), so copy the versioned object
 # under the versionless name.
 cp -pv "$LIBMPV_SO" artifact/libmpv.so
+# The build releases with --buildtype release but the object still carries its
+# debug sections (~110 MB here: the whole ffmpeg tree's DWARF), so strip it
+# explicitly (like the windows build) to get a small distributable.
+strip --strip-all artifact/libmpv.so
 
 echo "=== artifact contents ==="
 ls -l artifact

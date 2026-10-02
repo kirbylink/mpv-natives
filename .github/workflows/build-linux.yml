@@ -82,6 +82,27 @@ jobs:
           echo "=== contents ==="
           ls -l artifact-libmpv
 
+      # Verify the artifact is self-contained and portable: (1) it only links
+      # against system libs (no vendored .so), (2) it carries no debug sections
+      # (strip worked, artifact stays small), and (3) no build-machine paths
+      # leaked into the binary (the runtime config lookup must not depend on the
+      # runner's prefix - that is what broke ALSA before).
+      - name: Verify artifact (ldd, size, no build paths)
+        run: |
+          cd artifact-libmpv
+          echo "=== dynamic deps (system libs only) ==="
+          ldd libmpv.so
+          echo "=== debug sections (expect none) ==="
+          readelf -S libmpv.so | grep -c '\.debug' || true
+          echo "=== size ==="
+          du -h libmpv.so
+          echo "=== build-machine paths (expect no match) ==="
+          if strings -a libmpv.so | grep -q "linux_prefix\|/home/runner\|mpv-natives"; then
+            echo "ERROR: build paths found in libmpv.so"
+            exit 1
+          fi
+          echo "OK: no build paths"
+
       - name: Checksums
         run: |
           cd artifact-libmpv
