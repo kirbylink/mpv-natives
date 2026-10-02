@@ -12,6 +12,7 @@ name: release
 #   mpv-natives-linux-x86_64-<ver>.so
 #   mpv-natives-windows-x86_64-<ver>.dll
 #   mpv-natives-macos-universal-<ver>.dylib
+#   LICENSE-NOTICE.txt
 #   checksums.txt
 #
 # jlibmpv's RemoteNativeLocator resolves the download URL deterministically
@@ -41,9 +42,16 @@ jobs:
         with:
           path: artifacts
 
+      - name: Check out mpv-natives (for LICENSE-NOTICE.txt)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Assemble bare release assets
         run: |
-          VER="${{ needs.build-linux.outputs.version }}"
+          # Reusable workflows expose their called job's outputs nested under
+          # the job name used in the called file (here: "linux").
+          VER="${{ needs.build-linux.linux.outputs.version }}"
           [ -n "$VER" ] || { echo "ERROR: mpv version not set"; exit 1; }
           mkdir -p release
           # linux: single self-contained libmpv.so
@@ -55,6 +63,7 @@ jobs:
           # macos: single universal libmpv.dylib
           cp "artifacts/mpv-natives-macos-universal/libmpv.dylib" \
              "release/mpv-natives-macos-universal-${VER}.dylib"
+          cp LICENSE-NOTICE.txt release/
           (cd release && sha256sum * > checksums.txt)
           echo "=== release assets ==="
           ls -l release

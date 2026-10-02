@@ -158,12 +158,15 @@ _lcms2_mark=lib/liblcms2.a
 _ffmpeg () {
     gitpin https://github.com/FFmpeg/FFmpeg.git ffmpeg "$FFMPEG_VER"
     builddir ffmpeg
+    # No --enable-gpl: we only need LGPL-available features (see the linux
+    # script for the rationale) so the resulting libmpv stays LGPL and can be
+    # embedded via JNA without taint.
     # --arch is explicit: ffmpeg would otherwise auto-detect aarch64 from
     # uname -m on the runner even for the cross-compiled x86_64 slice.
     args=(
         --prefix="$prefix_dir" --pkg-config=pkg-config --target-os=darwin
         --arch="$ARCH"
-        --enable-gpl $commonflags
+        $commonflags
         --cc="$CC" --cxx="$CXX"
         --disable-{doc,programs}
         --enable-muxer=spdif --enable-encoder=mjpeg,png --enable-libdav1d
@@ -263,6 +266,7 @@ meson setup $build $MESON_EXTRA \
   --buildtype release -Dstrip=true \
   -Ddefault_library=shared \
   -Dlibmpv=true \
+  -Dgpl=false \
   -Dcplayer=false \
   -Dtests=false \
   -Dlua=disabled \
