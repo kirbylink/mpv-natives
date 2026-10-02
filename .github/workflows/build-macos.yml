@@ -10,21 +10,25 @@ name: build-macos
 # approach as the Windows build). jlibmpv expects the file name
 # `libmpv.dylib` (no -2) and one universal binary for both architectures.
 #
-# Pinned to mpv v0.41.0 — the version whose client API (131077) the jlibmpv
-# JNA bindings are validated against. Bump the ref here for a libmpv update.
-# The build recipe lives in ci/build-libmpv-macos.sh in this repository.
+# Pinned to the mpv tag in ci/versions.env - the version whose client API
+# (131077) the jlibmpv JNA bindings are validated against. Bump MPV_REF (and
+# the dependency pins) there for a libmpv update. The build recipe lives in
+# ci/build-libmpv-macos.sh.
+#
+# Triggers: pull requests (PR check), manual workflow_dispatch, and
+# workflow_call from release.yml on tag push. A push to main builds nothing.
 
 on:
-  push:
-    branches: [main]
+  pull_request:
   workflow_dispatch:
-
-env:
-  MPV_REF: v0.41.0
+  workflow_call:
 
 jobs:
-  build:
+  macos:
     runs-on: macos-15
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      version: ${{ steps.artifact.outputs.version }}
     env:
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -35,11 +39,17 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Load pinned versions
+        id: versions
+        run: |
+          source ci/versions.env
+          echo "mpv_ref=$MPV_REF" >> "$GITHUB_OUTPUT"
+
       - name: Check out mpv (pinned tag)
         uses: actions/checkout@v4
         with:
           repository: mpv-player/mpv
-          ref: ${{ env.MPV_REF }}
+          ref: ${{ steps.versions.outputs.mpv_ref }}
           path: mpv
           fetch-depth: 1
 
@@ -92,10 +102,17 @@ jobs:
           cat artifact-libmpv/checksums.txt
           ls -l artifact-libmpv
 
+      - name: Artifact name
+        id: artifact
+        run: |
+          VER=$(cat mpv/MPV_VERSION | tr -d '[:space:]')
+          echo "name=mpv-natives-macos-universal" >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mpv-natives-macos-universal-mpv-${{ env.MPV_REF }}
+          name: ${{ steps.artifact.outputs.name }}
           path: artifact-libmpv
 
       - name: Save ccache

@@ -1,0 +1,69 @@
+name: release
+
+# Publishes the self-contained libmpv for all three platforms as a GitHub
+# Release. Triggered by pushing a tag of the form v<mpv-version> (e.g.
+# v0.41.0). It reuses the three per-platform build workflows and re-uploads
+# their single-file artifacts as bare release assets plus a combined
+# checksums.txt.
+#
+# Asset names are derived from each build job's output and the mpv version
+# read from the mpv source tree, so the release tag and the mpv version stay
+# in sync:
+#   mpv-natives-linux-x86_64-<ver>.so
+#   mpv-natives-windows-x86_64-<ver>.dll
+#   mpv-natives-macos-universal-<ver>.dylib
+#   checksums.txt
+#
+# jlibmpv's RemoteNativeLocator resolves the download URL deterministically
+# from (platform, mpv version) against these names.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    uses: ./.github/workflows/build-linux.yml
+  build-windows:
+    uses: ./.github/workflows/build-windows.yml
+  build-macos:
+    uses: ./.github/workflows/build-macos.yml
+
+  publish:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble bare release assets
+        run: |
+          VER="${{ needs.build-linux.outputs.version }}"
+          [ -n "$VER" ] || { echo "ERROR: mpv version not set"; exit 1; }
+          mkdir -p release
+          # linux: single self-contained libmpv.so
+          cp "artifacts/mpv-natives-linux-x86_64/libmpv.so" \
+             "release/mpv-natives-linux-x86_64-${VER}.so"
+          # windows: single self-contained libmpv-*.dll (static CRT, no closure)
+          cp artifacts/mpv-natives-windows-x86_64/libmpv-*.dll \
+             "release/mpv-natives-windows-x86_64-${VER}.dll"
+          # macos: single universal libmpv.dylib
+          cp "artifacts/mpv-natives-macos-universal/libmpv.dylib" \
+             "release/mpv-natives-macos-universal-${VER}.dylib"
+          (cd release && sha256sum * > checksums.txt)
+          echo "=== release assets ==="
+          ls -l release
+          echo "=== checksums ==="
+          cat release/checksums.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: release/*
+          generate_release_notes: false
