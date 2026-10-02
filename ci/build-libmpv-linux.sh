@@ -155,15 +155,17 @@ _fontconfig () {
     # expat is the XML backend (our static build); no tests/tools/nls. freetype
     # resolves to our own static build via PKG_CONFIG_PATH (we link it into
     # libmpv, not fc's system one).
-    # sysconfdir/localstatedir are pinned to the canonical system paths so the
-    # config paths compiled into libfontconfig (CONFIGDIR, FONTCONFIG_PATH,
-    # FC_CACHEDIR) point at /etc/fonts on any machine, not at our build prefix.
-    # fontconfig loads its config from (in order): $FONTCONFIG_FILE,
-    # $FONTCONFIG_PATH, the compiled-in CONFIGDIR, then its built-in default
-    # config. With sysconfdir=/etc the compiled-in paths match every standard
-    # Linux install, so libass's font lookup works without any env vars.
+    #
+    # Leave the default prefix (do NOT pin sysconfdir=/etc): the config paths
+    # compiled into libfontconfig (FONTCONFIG_PATH/CONFIGDIR/FC_CACHEDIR) point
+    # at the build prefix, which does not exist on the target machine. That is
+    # harmless - when fontconfig finds no config file at the compiled-in path it
+    # falls back to its built-in default config, which scans /usr/share/fonts
+    # and /usr/local/share/fonts. So libass's font lookup works on any standard
+    # Linux box without env vars, and `make install` stays inside the prefix
+    # (no root needed). Pinning sysconfdir=/etc would instead make the build
+    # try to install its conf files into the real /etc/fonts and fail.
     meson setup .. --buildtype release -Dprefix="$prefix_dir" -Dlibdir=lib \
-        -Dsysconfdir=/etc -Dlocalstatedir=/var \
         -Dxml-backend=expat -Dtests=disabled -Dtools=disabled -Dnls=disabled \
         -Ddefault_library=static
     makeplusinstall
