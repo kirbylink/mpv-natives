@@ -21,8 +21,8 @@ set -e
 #   - gl is the plain GL render-API support (no X11/Wayland context backend),
 #     which jlibmpv's externally supplied OpenGL context (JOGL) consumes via
 #     the mpv render API. No vo is built at all (cplayer=false).
-#   - audio goes through the system libasound (linked dynamically, like
-#     CoreAudio/WASAPI); no PulseAudio/JACK/OSS.
+#   - audio goes through the system audio stack (PipeWire/Pulse/ALSA, all
+#     linked dynamically, like CoreAudio/WASAPI); no JACK/OSS.
 #
 # All third-party sources are pinned to the latest stable tag that existed on
 # the mpv v0.41.0 release date (2025-12-21), so a rebuild reproduces the same
@@ -280,9 +280,13 @@ rm -rf $build
 # against the static dependency archives built above. No CLI player, no tests,
 # no lua/javascript, no vulkan. plain-gl is the OpenGL render-API support
 # (no X11/Wayland context backend - jlibmpv supplies the GL context via JOGL).
-# Audio: alsa=enabled links the system libasound dynamically (meson finds it
-# via the system pkg-config), consistent with CoreAudio/WASAPI on the other
-# platforms - the OS audio stack is left dynamic, everything else static.
+# Audio: pipewire, pulse and alsa are all enabled and linked against their
+# system shared libs (meson finds them via the system pkg-config), consistent
+# with CoreAudio/WASAPI on the other platforms - the OS audio stack is left
+# dynamic, everything else static. mpv auto-probes audio drivers in the order
+# pipewire -> pulse -> alsa, so on a PipeWire/Pulse box it uses the working
+# server before falling back to the direct ALSA/dmix path (which is what
+# breaks on desktops where PipeWire owns the sound cards).
 meson setup $build \
   --buildtype release -Dstrip=true \
   -Ddefault_library=shared \
@@ -296,7 +300,8 @@ meson setup $build \
   -Dvulkan=disabled \
   -Dgl=enabled -Dplain-gl=enabled \
   -Dgl-x11=disabled -Degl=disabled -Ddrm=disabled -Dwayland=disabled \
-  -Dalsa=enabled -Dpulse=disabled -Djack=disabled -Doss-audio=disabled \
+  -Dpipewire=enabled -Dpulse=enabled -Dalsa=enabled \
+  -Djack=disabled -Doss-audio=disabled \
   -Dx11=disabled -Dx11-clipboard=disabled
 
 meson compile -C $build

@@ -3,9 +3,9 @@ name: build-linux
 # Builds a single self-contained libmpv.so for Linux (x86_64) from mpv source
 # pinned to a release tag. Every video dependency is built static and linked
 # into the one .so; glibc/pthread/dl/m, the system zlib and the system audio
-# stack (libasound.so.2) stay external, mirroring CoreAudio (macOS) and WASAPI
-# (Windows), so the OS audio is left dynamic and everything else is self
-# contained.
+# stack (PipeWire / PulseAudio / ALSA) stay external, mirroring CoreAudio
+# (macOS) and WASAPI (Windows), so the OS audio is left dynamic and
+# everything else is self contained.
 #
 # Linux is the easiest of the three platforms: a single native build on an
 # ubuntu runner, no cross-compile, no lipo. The only Linux-specific work is the
@@ -62,7 +62,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            ccache nasm ninja-build pkgconf cmake libasound2-dev
+            ccache nasm ninja-build pkgconf cmake \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev
           python3 -m pip install meson
 
       # Run the vendored build script from inside the mpv source tree, so the
@@ -99,11 +100,11 @@ jobs:
           readelf -S libmpv.so | grep -c '\.debug' || true
           echo "=== size ==="
           du -h libmpv.so
-          echo "=== ALSA is a dynamic system lib (not vendored) ==="
-          if ldd libmpv.so | grep -q 'libasound\.so'; then
-            echo "OK: libasound.so.2 present (system audio, as intended)"
+          echo "=== system audio libs present (pipewire/pulse/alsa, not vendored) ==="
+          if ldd libmpv.so | grep -Eq 'libpipewire-0\.3|libpulse\.so|libasound\.so'; then
+            echo "OK: at least one system audio lib present, as intended"
           else
-            echo "ERROR: libmpv.so does not link libasound (audio broken?)"
+            echo "ERROR: libmpv.so links no audio backend (no sound?)"
             exit 1
           fi
 
