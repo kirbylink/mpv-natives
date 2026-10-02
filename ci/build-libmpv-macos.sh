@@ -29,15 +29,18 @@ ARCH=${ARCH:-arm64}
 prefix_dir=$PWD/macos_prefix-$ARCH
 mkdir -p "$prefix_dir"
 
-wget="wget -nc --progress=bar:force"
+wget="wget -nc --progress=bar:force --tries=3 --timeout=60 --waitretry=5"
 
 TARGET_FLAG=""
 if [ "$ARCH" = "x86_64" ]; then
     TARGET_FLAG="--target=x86_64-apple-darwin"
 fi
 
-export CC="cc${TARGET_FLAG:+ $TARGET_FLAG}"
-export CXX="c++${TARGET_FLAG:+ $TARGET_FLAG}"
+# Route compilation through ccache (brew-installed by the workflow) so the
+# two-arch build (arm64 + x86_64) reuses cached objects across rebuilds.
+CCACHE=${CCACHE:-ccache}
+export CC="$CCACHE cc${TARGET_FLAG:+ $TARGET_FLAG}"
+export CXX="$CCACHE c++${TARGET_FLAG:+ $TARGET_FLAG}"
 export AR=ar
 export NM=nm
 export RANLIB=ranlib

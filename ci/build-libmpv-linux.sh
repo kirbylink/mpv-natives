@@ -31,7 +31,7 @@ set -e
 prefix_dir=$PWD/linux_prefix
 mkdir -p "$prefix_dir"
 
-wget="wget -nc --progress=bar:force"
+wget="wget -nc --progress=bar:force --tries=3 --timeout=60 --waitretry=5"
 
 # Route compilation through ccache (honored by ffmpeg's configure, meson and
 # CMake alike) so rebuilds after a versions.env bump reuse cached objects. In

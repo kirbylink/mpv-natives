@@ -30,7 +30,7 @@ mkdir -p "$prefix_dir"
 ln -snf . "$prefix_dir/usr"
 ln -snf . "$prefix_dir/local"
 
-wget="wget -nc --progress=bar:force"
+wget="wget -nc --progress=bar:force --tries=3 --timeout=60 --waitretry=5"
 
 # -posix is Ubuntu's variant with pthreads support
 export CC=$TARGET-gcc-posix
