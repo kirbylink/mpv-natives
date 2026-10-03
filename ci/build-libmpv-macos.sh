@@ -31,10 +31,26 @@ mkdir -p "$prefix_dir"
 
 wget="wget -nc --progress=bar:force --tries=3 --timeout=60 --waitretry=5"
 
+# Deployment target shared by every slice (Oldest macOS we still support:
+# Big Sur, the first arm64 release and the floor of mpv's Swift @available
+# guards). Lowering it keeps all features: mpv gates them on the SDK version,
+# not on this min. Raising it is only needed if a dependency uses a newer API
+# without an @available guard (that fails the build in CI, not at runtime).
+MACOS_MIN=11.0
+
+# Cross-compile target for the x86_64 slice (arm64 is a plain native build).
 TARGET_FLAG=""
 if [ "$ARCH" = "x86_64" ]; then
     TARGET_FLAG="--target=x86_64-apple-darwin"
 fi
+
+# Swift does not inherit the clang --target above: swiftc would otherwise
+# compile for the host architecture (arm64) even in the x86_64 slice, so the
+# generated Application/AppHub objects land in the wrong slice and the
+# universal dylib cannot dlopen on Intel. mpv's swiftc invocation takes its
+# own target triple (which also carries the deployment version), so both the
+# architecture and the min OS are pinned here in one flag.
+SWIFT_TARGET="${ARCH}-apple-macosx${MACOS_MIN}"
 
 # Route compilation through ccache (brew-installed by the workflow) so the
 # two-arch build (arm64 + x86_64) reuses cached objects across rebuilds.
@@ -45,8 +61,13 @@ export AR=ar
 export NM=nm
 export RANLIB=ranlib
 
-export CFLAGS="-O2 -pipe -Wall"
-export LDFLAGS=""
+# -mmacosx-version-min applies to every C/ObjC object mpv builds (natively and
+# cross) and keeps all statically linked dependencies in step; the linker
+# takes the max of the objects it links, so forgetting it here would leave
+# the whole dylib pinned to the runner's SDK minimum (15) instead of 11.
+export CFLAGS="-O2 -pipe -Wall -mmacosx-version-min=${MACOS_MIN}"
+export CXXFLAGS="-O2 -pipe -Wall -mmacosx-version-min=${MACOS_MIN}"
+export LDFLAGS="-mmacosx-version-min=${MACOS_MIN}"
 
 # Prefix for the static deps we build ourselves, added additively so the
 # system pkg-config files (zlib, ...) are still visible.
@@ -270,6 +291,7 @@ meson setup $build $MESON_EXTRA \
   -Dshaderc=disabled \
   -Dspirv-cross=disabled \
   -Dvulkan=disabled \
+  -Dswift-flags="--target=${SWIFT_TARGET}" \
   -Dcocoa=enabled \
   -Dgl-cocoa=enabled \
   -Dcoreaudio=enabled \
