@@ -1,23 +1,36 @@
 # mpv-natives
 
+![Release](https://img.shields.io/github/v/release/kirbylink/mpv-natives)
+![mpv v0.41.0](https://img.shields.io/badge/mpv-v0.41.0-informational)
+![Downloads (latest release)](https://img.shields.io/github/downloads/kirbylink/mpv-natives/latest/total)
+![Downloads (all releases)](https://img.shields.io/github/downloads/kirbylink/mpv-natives/total)
+![License](https://img.shields.io/github/license/kirbylink/mpv-natives)
+
 Self-built [libmpv](https://mpv.io/manual/#libmpv) native binaries for
-[jlibmpv](https://github.com/kirbylink/jlibmpv), the Java/JNA wrapper library.
+Linux, macOS and Windows. They are built for
+[jlibmpv](https://github.com/kirbylink/jlibmpv), the Java/JNA wrapper
+library, but since they are plain library files with no jlibmpv-specific
+content, they can be loaded from any language or binding.
 
 ## Why this repository exists
 
-`jlibmpv` is 100% MIT and deliberately does not bundle any native binaries.
-The build here targets mpv's LGPL-2.1-or-later license path (`-Dgpl=false`,
-ffmpeg without `--enable-gpl`), so the resulting `libmpv` can be embedded into
-arbitrary — including closed-source — applications that load it in-process via
-JNA, without the GPL's copyleft obligations reaching into their code. End
-users who want a drop-in native they can point `mpv.libmpv.path` at (or that a
-`RemoteNativeLocator` can download) find them here, as versioned GitHub
-release assets.
+The official mpv releases do not ship a standalone `libmpv` — it is only
+embedded in the platform packages — and the community daily builds ship
+rolling versions with debug symbols intact (the Windows `libmpv-2.dll`
+alone is ~220 MB, versus ~35 MB stripped here). For a library that
+applications can pin as a dependency, this repository provides a pinned,
+stripped, self-contained `libmpv`, reproducible from its tag alone.
 
-- **Pinned version:** mpv `v0.41.0` — the exact client API (131077) the
-  jlibmpv JNA bindings are validated against. A libmpv update means bumping
-  `MPV_REF` (and the affected dependency pins) in `ci/versions.env` — the
-  single source of truth for every version in this repository.
+The artifacts target mpv's LGPL-2.1-or-later license path (`-Dgpl=false`,
+ffmpeg without `--enable-gpl`), so the resulting `libmpv` can be embedded
+into arbitrary — including closed-source — applications that load it
+in-process, without the GPL's copyleft obligations reaching into their code.
+
+- **Pinned version:** mpv `v0.41.0` (client API 131077) — the exact,
+  stable revision every release asset is built from. A libmpv update means
+  bumping `MPV_REF` (and the affected dependency pins) in
+  `ci/versions.env` — the single source of truth for every version in this
+  repository.
 - **Build source:** the mpv source tree is checked out at that tag by
   GitHub Actions and built with the vendored scripts in `ci/`
   (`build-libmpv-mingw64.sh`, `build-libmpv-macos.sh`, `build-libmpv-linux.sh`).
@@ -30,11 +43,18 @@ Each platform produces a single self-contained library file plus a combined
 tag of the form `v<mpv-version>` (e.g. `v0.41.0`), which triggers
 `release.yml`:
 
-| Asset | Contents |
-|---|---|
-| `mpv-natives-windows-x86_64-<ver>.dll` | `libmpv-2.dll` (all dependencies statically linked, mingw64 build) |
-| `mpv-natives-macos-universal-<ver>.dylib` | `libmpv.dylib` (universal arm64 + x86_64, all dependencies statically linked) |
-| `mpv-natives-linux-x86_64-<ver>.so` | `libmpv.so` (all dependencies statically linked, native x86_64 build) |
+| Asset | Contents | Size |
+|---|---|---|
+| `mpv-natives-windows-x86_64-<ver>.dll` | `libmpv-2.dll` (all dependencies statically linked, mingw64 build) | ~35 MB |
+| `mpv-natives-macos-universal-<ver>.dylib` | `libmpv.dylib` (universal arm64 + x86_64, all dependencies statically linked) | ~68 MB |
+| `mpv-natives-linux-x86_64-<ver>.so` | `libmpv.so` (all dependencies statically linked, native x86_64 build) | ~35 MB |
+
+Per-asset download counts of the latest release (the release page only
+shows a combined total):
+
+![windows x86_64](https://img.shields.io/github/downloads/kirbylink/mpv-natives/latest/mpv-natives-windows-x86_64-0.41.0.dll)
+![macos universal](https://img.shields.io/github/downloads/kirbylink/mpv-natives/latest/mpv-natives-macos-universal-0.41.0.dylib)
+![linux x86_64](https://img.shields.io/github/downloads/kirbylink/mpv-natives/latest/mpv-natives-linux-x86_64-0.41.0.so)
 
 Each native is fully self-contained: every dependency (ffmpeg, libass,
 libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into the
