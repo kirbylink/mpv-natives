@@ -99,11 +99,21 @@ function makeplusinstall {
     fi
 }
 
+# Download a release tarball, trying each URL in turn (a tarball usually
+# exists on several independent mirrors; the first one that serves it wins).
 function gettar {
     local name="${1##*/}"
     [ -d "${name%%.*}" ] && return 0
-    $wget "$1"
-    tar -xaf "$name"
+    local url
+    for url in "$@"; do
+        if $wget "$url" && tar -xaf "$name"; then
+            return 0
+        fi
+        echo "Download of $name from $url failed, trying next mirror"
+        rm -f "$name"
+    done
+    echo "Error: could not download $name from any of: $*"
+    return 1
 }
 
 # Clone a git dependency at a pinned tag (shallow, tag-checked-out).
@@ -136,7 +146,12 @@ function build_if_missing {
 ## mpv's dependencies (all static)
 
 _iconv () {
-    gettar "https://ftpmirror.gnu.org/gnu/libiconv/libiconv-${ICONV_VER}.tar.gz"
+    # libiconv is a plain GNU archive; the savanna/ftpmirror front hosts are
+    # flaky, so try several independent GNU mirrors (gettar falls back).
+    gettar \
+        "https://www.mirrorservice.org/sites/ftp.gnu.org/gnu/libiconv/libiconv-${ICONV_VER}.tar.gz" \
+        "https://mirrors.kernel.org/gnu/libiconv/libiconv-${ICONV_VER}.tar.gz" \
+        "https://ftp.osuosl.org/pub/gnu/libiconv/libiconv-${ICONV_VER}.tar.gz"
     builddir libiconv-${ICONV_VER}
     ../configure --host=$TARGET $commonflags
     makeplusinstall
@@ -198,8 +213,10 @@ _ffmpeg () {
 _ffmpeg_mark=lib/libavcodec.a
 
 _freetype () {
-    gettar "https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VER}.tar.xz"
-    builddir freetype-${FREETYPE_VER}
+    # freetype moved to gitlab and publishes no release tarballs (the savanna
+    # tarball host is down), so clone the pinned tag like the other git deps.
+    gitpin https://gitlab.freedesktop.org/freetype/freetype.git freetype "$FREETYPE_TAG"
+    builddir freetype
     meson setup .. --cross-file "$prefix_dir/crossfile" -Ddefault_library=static
     makeplusinstall
     popd
