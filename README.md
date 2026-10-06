@@ -7,10 +7,11 @@
 ![License](https://img.shields.io/github/license/kirbylink/mpv-natives)
 
 Self-built [libmpv](https://mpv.io/manual/#libmpv) native binaries for
-Linux, macOS and Windows. They are built for
-[jlibmpv](https://github.com/kirbylink/jlibmpv), the Java/JNA wrapper
-library, but since they are plain library files with no jlibmpv-specific
-content, they can be loaded from any language or binding.
+Linux, macOS and Windows. The binaries are plain library files with no
+language-specific content, so they can be loaded from any language or
+binding (FFI, JNA, ctypes, …). The repository started as the native
+provider for [jlibmpv](https://github.com/kirbylink/jlibmpv), the
+Java/JNA wrapper library.
 
 ## Why this repository exists
 
@@ -60,8 +61,8 @@ Each native is fully self-contained: every dependency (ffmpeg, libass,
 libplacebo, harfbuzz, freetype, fribidi, …) is statically linked into the
 single library together with the C/C++ runtime where needed. The library
 depends only on the platform's system libraries, so there is no dependency
-closure to ship alongside it — jlibmpv loads it at runtime via JNA and never
-compiles against it, so no public headers are shipped.
+closure to ship alongside it. Consumers load the library at runtime and
+never compile against it, so no public headers are shipped.
 
 Audio is the one area deliberately left to the OS stack: on Linux the
 PipeWire / Pulse / ALSA libraries are linked dynamically (mirroring CoreAudio
@@ -71,14 +72,11 @@ removes the need for the distribution package (`libmpv1`), which lags behind in
 codec support (dav1d/AV1, x264/x265): the pinned ffmpeg 8.0.1 guarantees the
 full codec set on any recent glibc distribution.
 
-## How to use with jlibmpv
+## Using the release assets
 
-1. Download the release asset for your platform (a single library file).
-2. Point jlibmpv at it:
-   `-Dmpv.libmpv.path=/path/to/mpv-natives-<platform>-<ver>.<ext>`.
-
-   Or let a `RemoteNativeLocator` fetch it — the download URL is
-   deterministic from (platform, mpv version):
+Use the release asset for your platform (a single library file) directly,
+or fetch it programmatically — the download URL is deterministic from
+(platform, mpv version):
 
    ```
    https://github.com/kirbylink/mpv-natives/releases/download/v<ver>/mpv-natives-<platform>-<ver>.<ext>
@@ -103,9 +101,10 @@ The release artifacts are built from mpv on its **LGPL-2.1-or-later** path
 LGPL, with BSD-licensed components such as dav1d). Distributing an
 application that loads one of these libraries is fine under any license;
 the LGPL only requires that the user be able to replace the library with a
-different build (which is exactly what `mpv.libmpv.path` allows) and that
-you keep the library's license and source-available terms for the library
-itself. If you use a GPL distribution instead, the GPL's obligations apply.
+different build (trivially possible since it is loaded as a separate file
+at runtime) and that you keep the library's license and source-available
+terms for the library itself. If you use a GPL distribution instead, the
+GPL's obligations apply.
 
 The build scripts and workflows in this repository are MIT-licensed. See
 [LICENSE](LICENSE) for the repository's license terms.
