@@ -49,9 +49,11 @@ jobs:
 
       - name: Assemble bare release assets
         run: |
-          # Reusable workflows expose their called job's outputs nested under
-          # the job name used in the called file (here: "linux").
-          VER="${{ needs.build-linux.linux.outputs.version }}"
+          # The mpv version comes from each build workflow's top-level
+          # workflow_call output (a reusable workflow exposes only those to
+          # the caller, not its job outputs). All three build the same
+          # pinned mpv, so any one of them yields the version.
+          VER="${{ needs.build-linux.outputs.version }}"
           [ -n "$VER" ] || { echo "ERROR: mpv version not set"; exit 1; }
           mkdir -p release
           # linux: single self-contained libmpv.so

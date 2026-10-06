@@ -25,6 +25,13 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    # A called (reusable) workflow only exposes top-level `workflow_call`
+    # outputs to the caller - job outputs are not. release.yml needs the
+    # mpv version to name the release assets, so expose it here.
+    outputs:
+      version:
+        description: mpv version the built artifact was compiled from
+        value: ${{ jobs.linux.outputs.version }}
 
 env:
   TARGET: x86_64-linux
