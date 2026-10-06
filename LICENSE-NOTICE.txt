@@ -1,0 +1,39 @@
+License notice for the mpv-natives release assets
+=================================================
+
+Each platform asset (mpv-natives-<platform>-<version>.<ext>) is a single,
+self-contained libmpv build:
+
+  libmpv is built from mpv on its LGPL-2.1-or-later license path
+  (-Dgpl=false) and from FFmpeg without --enable-gpl. All statically
+  linked dependencies (ffmpeg, libass, libplacebo, harfbuzz, freetype,
+  fribidi, dav1d, lcms2, ...) are either LGPL-2.1, BSD-licensed, or in
+  the public domain. The result is a library you may distribute under
+  LGPL-2.1-or-later.
+
+  Using it: an application may load this library in-process (e.g. via
+  JNA, as jlibmpv does) or link against it. The LGPL does not make your
+  application's own code open source. It does require that you allow
+  the end user to replace the library with a differently licensed build
+  (re-linking for static builds; a configurable load path such as
+  jlibmpv's mpv.libmpv.path satisfies this for dynamic loading) and
+  that you preserve the library's copyright and license information.
+
+Source availability
+-------------------
+The library is built exclusively from source code that is publicly
+available:
+
+  mpv        v0.41.0      https://github.com/mpv-player/mpv (LGPL-2.1+/GPL-2+)
+  FFmpeg     n8.0.1       https://github.com/FFmpeg/FFmpeg (LGPL-2.1+/GPL-2+)
+  The exact pins for every dependency are listed in ci/versions.env of
+  the mpv-natives repository, and the build is fully reproducible via
+  the scripts in ci/build-libmpv-*.sh.
+
+Relevant license texts:
+  LGPL-2.1   https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt
+  GPL-2.0    https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+  BSD-2      (per dependency, in its source tree)
+
+The build scripts and CI workflows in the mpv-natives repository are
+MIT-licensed (see LICENSE in that repository).

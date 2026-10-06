@@ -5,10 +5,14 @@ Self-built [libmpv](https://mpv.io/manual/#libmpv) native binaries for
 
 ## Why this repository exists
 
-`jlibmpv` is 100% MIT and deliberately does not bundle any native binaries
-(libmpv is GPL-licensed). End users who want a drop-in native they can point
-`mpv.libmpv.path` at (or that a `RemoteNativeLocator` can download) find them
-here, as versioned GitHub release assets.
+`jlibmpv` is 100% MIT and deliberately does not bundle any native binaries.
+The build here targets mpv's LGPL-2.1-or-later license path (`-Dgpl=false`,
+ffmpeg without `--enable-gpl`), so the resulting `libmpv` can be embedded into
+arbitrary — including closed-source — applications that load it in-process via
+JNA, without the GPL's copyleft obligations reaching into their code. End
+users who want a drop-in native they can point `mpv.libmpv.path` at (or that a
+`RemoteNativeLocator` can download) find them here, as versioned GitHub
+release assets.
 
 - **Pinned version:** mpv `v0.41.0` — the exact client API (131077) the
   jlibmpv JNA bindings are validated against. A libmpv update means bumping
@@ -73,6 +77,15 @@ Builds run on GitHub Actions. There is nothing to build locally.
 
 ## License
 
-The artifacts are built from mpv (GPL-3.0-or-later) and its dependencies
-(LGPL/GPL) and are distributed under those licenses. See [LICENSE](LICENSE)
-for the repository's license terms.
+The release artifacts are built from mpv on its **LGPL-2.1-or-later** path
+(`-Dgpl=false`) and from FFmpeg without `--enable-gpl`, so the resulting
+`libmpv` is LGPL-2.1-or-later (the ffmpeg libraries inside are likewise
+LGPL, with BSD-licensed components such as dav1d). Distributing an
+application that loads one of these libraries is fine under any license;
+the LGPL only requires that the user be able to replace the library with a
+different build (which is exactly what `mpv.libmpv.path` allows) and that
+you keep the library's license and source-available terms for the library
+itself. If you use a GPL distribution instead, the GPL's obligations apply.
+
+The build scripts and workflows in this repository are MIT-licensed. See
+[LICENSE](LICENSE) for the repository's license terms.
